@@ -43,7 +43,7 @@ const Player = () => {
 
   return (
     <group ref={ref} position={[20, 1, 0]}>
-      <mesh>
+      <mesh castShadow>
         <sphereGeometry args={[0.5, 16, 16]} />
         <meshStandardMaterial color="hotpink" />
       </mesh>

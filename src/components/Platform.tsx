@@ -18,7 +18,7 @@ const Platform = ({
   ]
   return (
     <>
-      <mesh position={position} receiveShadow>
+      <mesh position={position} receiveShadow castShadow>
         <cylinderGeometry args={[radius, radius, 1, 32]} />
         <meshStandardMaterial color={large ? 'slategray' : 'gray'} />
       </mesh>

@@ -15,11 +15,11 @@ const positions = [...Array(8)].map((_, i) => {
 const Scene = () => {
   const { state } = useGame()
   return (
-    <Canvas shadows camera={{ position: [0, 20, 35], fov: 60 }}>
+    <Canvas gl={{ antialias: true }} shadows camera={{ position: [0, 20, 35], fov: 60 }}>
       <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <directionalLight position={[10, 10, 5]} intensity={1.5} castShadow shadow-mapSize={[2048, 2048]} />
       <color attach="background" args={["#87CEEB"]} />
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
+      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} makeDefault />
       <Suspense fallback={null}>
         {positions.map((pos, idx) => (
           <Platform key={idx + 1} id={idx + 1} position={pos as [number, number, number]} />
