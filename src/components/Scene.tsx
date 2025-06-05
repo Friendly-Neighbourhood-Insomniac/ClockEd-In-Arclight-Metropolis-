@@ -15,9 +15,10 @@ const positions = [...Array(8)].map((_, i) => {
 const Scene = () => {
   const { state } = useGame()
   return (
-    <Canvas camera={{ position: [0, 20, 35], fov: 60 }}>
+    <Canvas shadows camera={{ position: [0, 20, 35], fov: 60 }}>
       <ambientLight intensity={0.7} />
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <color attach="background" args={["#87CEEB"]} />
       <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
       <Suspense fallback={null}>
         {positions.map((pos, idx) => (

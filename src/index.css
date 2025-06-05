@@ -13,3 +13,9 @@ body,
   padding: 0;
   overflow: hidden;
 }
+
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
