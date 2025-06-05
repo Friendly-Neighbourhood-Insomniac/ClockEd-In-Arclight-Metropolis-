@@ -38,6 +38,12 @@ export function createSteampunkWorld(scene) {
   const bridgeLength = (numSegments - 1) * (bridgeSegmentLength + segmentGap) + bridgeSegmentLength;
   const targetPlatformCenterX = bridgeGroupStartX + bridgeLength;
   const targetPlatformCenterZ = octagonOrigin.z; // Bridge extends along X axis
+
+  const platformGroups = [];
+  const platformCenters = [];
+  const platformSizes = [];
+  const bridgePlinthsByPlatform = [];
+
   // Create 8 platforms in an octagonal layout
   for (let i = 0; i < 8; i++) {
     const angle = (i / 8) * Math.PI * 2;
@@ -71,19 +77,22 @@ export function createSteampunkWorld(scene) {
     rim.rotation.x = Math.PI / 2;
     rim.castShadow = true;
     platformGroup.add(rim);
-    // If this is the platform the bridge connects to (i === 0), add decorative plinths
-    if (i === 0) {
-      const plinthGeometry = new THREE.CylinderGeometry(0.5, 0.7, 1.5, 6);
-      const plinthMaterial = bronzeMaterial.clone(); // Use the same bronze material
-      const plinth1 = new THREE.Mesh(plinthGeometry, plinthMaterial);
-      plinth1.position.set(0, octagonPlatformThickness / 2 + 1.5 / 2, (bridgeSegmentWidth / 2) + 0.5);
-      plinth1.castShadow = true;
-      platformGroup.add(plinth1);
-      const plinth2 = new THREE.Mesh(plinthGeometry, plinthMaterial);
-      plinth2.position.set(0, octagonPlatformThickness / 2 + 1.5 / 2, -((bridgeSegmentWidth / 2) + 0.5));
-      plinth2.castShadow = true;
-      platformGroup.add(plinth2);
-    }
+    // Add decorative plinths on every platform
+    const plinthGeometry = new THREE.CylinderGeometry(0.5, 0.7, 1.5, 6);
+    const plinthMaterial = bronzeMaterial.clone();
+    const plinth1 = new THREE.Mesh(plinthGeometry, plinthMaterial);
+    plinth1.position.set(0, octagonPlatformThickness / 2 + 1.5 / 2, (bridgeSegmentWidth / 2) + 0.5);
+    plinth1.castShadow = true;
+    platformGroup.add(plinth1);
+    const plinth2 = new THREE.Mesh(plinthGeometry, plinthMaterial);
+    plinth2.position.set(0, octagonPlatformThickness / 2 + 1.5 / 2, -((bridgeSegmentWidth / 2) + 0.5));
+    plinth2.castShadow = true;
+    platformGroup.add(plinth2);
+    bridgePlinthsByPlatform[i] = [plinth1, plinth2];
+
+    platformGroups[i] = platformGroup;
+    platformCenters[i] = new THREE.Vector3(x, octagonOrigin.y, z);
+    platformSizes[i] = currentPlatformSize;
     // Add Gear-Totem to platform i=3
     if (i === 3) {
       const totemGroup = new THREE.Group();
@@ -242,112 +251,48 @@ export function createSteampunkWorld(scene) {
     worldObjects.push(cloud);
   }
 // Second main platform previously here, now removed.
-  // Create the Bridge
-  const bridgeGroup = new THREE.Group();
-  // Position bridge to start from the edge of the central octagonal platform and extend along +X
-  // Central platform surface Y: octagonOrigin.y + centralPlatformBaseThickness / 2
-  const centralPlatformSurfaceY = octagonOrigin.y + (centralPlatformBaseThickness / 2);
-  // Bridge group starts at the +X edge of the central platform
-  bridgeGroup.position.set(
-    octagonOrigin.x + centralPlatformBaseSize, 
-    centralPlatformSurfaceY + 0.15, // Slightly above the platform surface
-    octagonOrigin.z
-  );
-  scene.add(bridgeGroup);
-  worldObjects.push(bridgeGroup);
-  // Bridge geometry constants are now defined earlier (lines 31-34)
-  // const bridgeSegmentLength = 1.8; // Defined earlier
-  // const bridgeSegmentWidth = 2.5; // Defined earlier
+  // ---- Generalised bridge creation ----
   const bridgeSegmentHeight = 0.3;
-  // const segmentGap = 0.2; // Defined earlier
-  // const numSegments = 12; // Defined earlier
   const bridgePlankGeometry = new THREE.BoxGeometry(bridgeSegmentLength, bridgeSegmentHeight, bridgeSegmentWidth);
-  
-  for (let i = 0; i < numSegments; i++) {
-    const plank = new THREE.Mesh(bridgePlankGeometry, bronzeMaterial.clone());
-    // Planks are positioned relative to the bridgeGroup, starting from its origin and extending along +X
-    plank.position.x = (bridgeSegmentLength / 2) + i * (bridgeSegmentLength + segmentGap);
-    // plank.position.y is 0 relative to bridgeGroup, which is already set at the correct height.
-    plank.castShadow = true;
-    plank.receiveShadow = true;
-    bridgeGroup.add(plank);
-  }
-  bridgeGroup.visible = false; // Bridge is initially hidden
-  // Find the plinths to return them for interaction
-  let bridgePlinths = [];
-  worldObjects.forEach(obj => {
-    if (obj.children) {
-      obj.children.forEach(child => {
-        // Assuming plinths were added to a platform group that's identifiable
-        // Or, more robustly, give plinths a specific name or userData property when created
-        // For now, let's assume the plinths are the CylinderGeometries with height 1.5 on platform i=0
-        if (child.geometry && child.geometry.type === 'CylinderGeometry' && child.geometry.parameters.height === 1.5) {
-            // This is a heuristic. A better way would be to tag them during creation.
-            // For this specific setup where platform i=0 has two such plinths.
-            const platformGroupForPlinths = worldObjects.find(wo => 
-                wo.position.x === targetPlatformCenterX && wo.position.z === targetPlatformCenterZ
-            );
-            if (platformGroupForPlinths && child.parent === platformGroupForPlinths) {
-                 bridgePlinths.push(child);
-            }
-        }
-      });
+
+  const bridges = [];
+
+  const platformSurfaceY = octagonOrigin.y + octagonPlatformThickness / 2;
+  const bridgeYPosition = platformSurfaceY + bridgeSegmentHeight / 2;
+
+  function createBridge(startCenter, startSize, endCenter, endSize) {
+    const group = new THREE.Group();
+    const direction = new THREE.Vector3().subVectors(endCenter, startCenter);
+    const totalLength = direction.length();
+    direction.normalize();
+    group.position.copy(startCenter).addScaledVector(direction, startSize);
+    group.position.y = bridgeYPosition;
+    const angleY = Math.atan2(direction.x, direction.z) - Math.PI / 2;
+    group.rotation.y = angleY;
+    const spanLength = totalLength - (startSize + endSize);
+    const segs = Math.max(1, Math.floor((spanLength + segmentGap) / (bridgeSegmentLength + segmentGap)));
+    for (let i = 0; i < segs; i++) {
+      const plank = new THREE.Mesh(bridgePlankGeometry, bronzeMaterial.clone());
+      plank.position.x = (bridgeSegmentLength / 2) + i * (bridgeSegmentLength + segmentGap);
+      plank.castShadow = true;
+      plank.receiveShadow = true;
+      group.add(plank);
     }
-  });
-  // Ensure we only get two plinths from the correct platform. This might need refinement if structure changes.
-  // A direct reference during creation loop (i===0) is safer.
-  // Let's refine this by directly capturing plinths from the loop where i === 0.
-  const targetPlatform = worldObjects.find(wo => 
-    wo.position.x === targetPlatformCenterX && wo.position.z === targetPlatformCenterZ
-  );
-  
-  bridgePlinths = [];
-  if (targetPlatform) {
-    targetPlatform.children.forEach(child => {
-      if (child.geometry && child.geometry.type === 'CylinderGeometry' && 
-          child.geometry.parameters.height === 1.5 && 
-          (child.position.z > bridgeSegmentWidth / 2 || child.position.z < -bridgeSegmentWidth / 2) ) {
-            bridgePlinths.push(child);
-          }
-    });
+    group.visible = false;
+    scene.add(group);
+    worldObjects.push(group);
+    bridges.push(group);
   }
-  // --- Create Bridge 2 (Connects plinth platform P0 to another octagonal platform P2) ---
-  const bridge2Group = new THREE.Group();
-  const platformSurfaceY = octagonOrigin.y + octagonPlatformThickness / 2; // Y-level of platform tops: 15.6
-  const bridgeYPosition = platformSurfaceY + bridgeSegmentHeight / 2; // Center Y for planks: 15.75
-  // P0 is the platform with plinths (platform i=0 in the octagonal loop)
-  const p0_center_x = targetPlatformCenterX; // 30.8
-  const p0_center_z = targetPlatformCenterZ; // 70
-  // P2 is platform i=2 in the octagonal loop
-  const angle_p2 = (2 / 8) * Math.PI * 2; // Math.PI / 2
-  const p2_center_x = octagonOrigin.x + Math.cos(angle_p2) * octagonRadius; // 0
-  const p2_center_z = octagonOrigin.z + Math.sin(angle_p2) * octagonRadius; // 70 + 35 = 105
-  const bridge2_startPlatform_center = new THREE.Vector3(p0_center_x, platformSurfaceY, p0_center_z);
-  const bridge2_endPlatform_center = new THREE.Vector3(p2_center_x, platformSurfaceY, p2_center_z);
-  const bridge2_direction = new THREE.Vector3().subVectors(bridge2_endPlatform_center, bridge2_startPlatform_center);
-  const bridge2_totalLength = bridge2_direction.length();
-  bridge2_direction.normalize();
-  // Position bridge2Group at the edge of the starting platform (P0)
-  bridge2Group.position.copy(bridge2_startPlatform_center)
-    .addScaledVector(bridge2_direction, octagonPlatformSize); // Move to P0's edge
-  bridge2Group.position.y = bridgeYPosition;
-  // Rotate bridge2Group to align its local +X axis with bridge2_direction
-  // Math.atan2(direction.x, direction.z) gives angle relative to +Z. We want angle for +X.
-  const angleY_bridge2 = Math.atan2(bridge2_direction.x, bridge2_direction.z) - Math.PI / 2;
-  bridge2Group.rotation.y = angleY_bridge2;
-  // Calculate number of segments for the span between platform edges
-  const bridge2_spanLength = bridge2_totalLength - (2 * octagonPlatformSize);
-  const bridge2_numSegments = Math.max(1, Math.floor((bridge2_spanLength + segmentGap) / (bridgeSegmentLength + segmentGap)));
-  for (let i = 0; i < bridge2_numSegments; i++) {
-    const plank = new THREE.Mesh(bridgePlankGeometry, bronzeMaterial.clone()); // Use same geometry/material
-    // Position planks along the local X-axis of bridge2Group
-    plank.position.x = (bridgeSegmentLength / 2) + i * (bridgeSegmentLength + segmentGap);
-    plank.castShadow = true;
-    plank.receiveShadow = true;
-    bridge2Group.add(plank);
+
+  // Bridge from central platform to first platform
+  const centralPlatformSurfaceCenter = new THREE.Vector3(octagonOrigin.x, platformSurfaceY, octagonOrigin.z);
+  createBridge(centralPlatformSurfaceCenter, centralPlatformBaseSize, platformCenters[0], platformSizes[0]);
+
+  // Sequential bridges connecting platforms 0 -> 1 -> ... -> 7
+  for (let i = 0; i < 7; i++) {
+    createBridge(platformCenters[i], platformSizes[i], platformCenters[i + 1], platformSizes[i + 1]);
   }
-  bridge2Group.visible = false; // Initially hidden
-  scene.add(bridge2Group);
-  worldObjects.push(bridge2Group);
-  return { worldObjects, bridge: bridgeGroup, bridgePlinths, bridge2: bridge2Group };
+
+  const bridgePlinths = bridgePlinthsByPlatform.flat();
+  return { worldObjects, bridges, bridgePlinths };
 }
