@@ -32,7 +32,7 @@ const SegmentedBridge = ({
   return (
     <>
       {segments.positions.map((pos, idx) => (
-        <mesh key={idx} position={pos as [number, number, number]} rotation={[0, segments.angle, 0]}>
+        <mesh key={idx} position={pos as [number, number, number]} rotation={[0, segments.angle, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.6, 0.2, 0.9]} />
           <meshStandardMaterial color="sienna" />
         </mesh>

@@ -46,7 +46,7 @@ const InteractiveObject = ({
       onPointerOut={() => setHovered(false)}
       onClick={handleClick}
     >
-      <mesh>
+      <mesh castShadow receiveShadow>
         <cylinderGeometry args={[0.6, 0.6, 0.2, 12]} />
         <meshStandardMaterial
           color={isActive ? '#22c55e' : '#f59e0b'}

@@ -15,12 +15,31 @@ const positions = [...Array(8)].map((_, i) => {
 const Scene = () => {
   const { state } = useGame()
   return (
-    <Canvas gl={{ antialias: true }} shadows camera={{ position: [0, 20, 35], fov: 60 }}>
+    <Canvas gl={{ antialias: true }} shadows dpr={[1, 2]} camera={{ position: [0, 20, 35], fov: 60 }}>
       <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 10, 5]} intensity={1.5} castShadow shadow-mapSize={[2048, 2048]} />
+      <directionalLight 
+        position={[10, 10, 5]} 
+        intensity={1.5} 
+        castShadow 
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
+      />
       <color attach="background" args={["#87CEEB"]} />
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} makeDefault />
+      <OrbitControls 
+        enablePan={true} 
+        enableZoom={true} 
+        enableRotate={true} 
+        makeDefault
+        maxPolarAngle={Math.PI / 2.1}
+      />
       <Suspense fallback={null}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+          <planeGeometry args={[100, 100]} />
+          <meshStandardMaterial color="#a0a0a0" />
+        </mesh>
         {positions.map((pos, idx) => (
           <Platform key={idx + 1} id={idx + 1} position={pos as [number, number, number]} />
         ))}
