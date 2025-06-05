@@ -10,10 +10,9 @@ const Game = () => {
   const mountRef = useRef(null); // For mounting the Three.js canvas
   const gameRef = useRef(null); // To store Three.js objects for access outside setup
   const [interactedObjects, setInteractedObjects] = useState(0); // Total activated mechanisms for UI
-  const [activatedPlatformGears, setActivatedPlatformGears] = useState(0); // Gears for bridge logic
-  const [isBridgeExtended, setIsBridgeExtended] = useState(false); // Flag to animate bridge only once
-  const [activatedPlinths, setActivatedPlinths] = useState(0); // Plinths for second bridge logic
-  const [isBridge2Extended, setIsBridge2Extended] = useState(false); // Flag for the second bridge animation
+  const [activatedPlatformGears, setActivatedPlatformGears] = useState(0); // Gears for first bridge
+  const [activatedPlinths, setActivatedPlinths] = useState(0); // Total plinth activations
+  const [extendedBridges, setExtendedBridges] = useState([]); // Track which bridges have been extended
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -59,9 +58,9 @@ const Game = () => {
       height: 4,
       rotationSpeed: 0.003
     });
-    // Create world
-    // We'll expect createSteampunkWorld to also return bridge2 in a future step
-    const { worldObjects, bridge, bridgePlinths, bridge2 } = createSteampunkWorld(scene);
+    // Create world with sequential bridges
+    const { worldObjects, bridges, bridgePlinths } = createSteampunkWorld(scene);
+    setExtendedBridges(Array(bridges.length).fill(false));
     setupAtmosphericLighting(scene);
     const interactables = createInteractables(
       scene,
@@ -131,8 +130,7 @@ const Game = () => {
       thirdPersonController,
       worldObjects,
       interactables,
-      bridge,
-      bridge2 // Store bridge2 reference
+      bridges
     };
 
     // Resize handler
@@ -154,70 +152,59 @@ const Game = () => {
       renderer.dispose();
     };
   }, []); // Empty dependency array ensures this runs once on mount
-  // useEffect for bridge activation logic
+  const extendBridge = (index) => {
+    if (!gameRef.current || !gameRef.current.bridges) return;
+    const group = gameRef.current.bridges[index];
+    if (!group) return;
+    setExtendedBridges(prev => {
+      if (prev[index]) return prev;
+      const arr = [...prev];
+      arr[index] = true;
+      return arr;
+    });
+    group.visible = true;
+    group.children.forEach((plank, idx) => {
+      if (plank.material) {
+        plank.scale.set(0.01, 1, 1);
+        plank.material.transparent = true;
+        plank.material.opacity = 0;
+        new TWEEN.Tween(plank.scale)
+          .to({ x: 1 }, 700)
+          .delay(idx * 150)
+          .easing(TWEEN.Easing.Elastic.Out)
+          .start();
+        new TWEEN.Tween(plank.material)
+          .to({ opacity: 1 }, 500)
+          .delay(idx * 150)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start();
+      }
+    });
+  };
+
+  // Extend first bridge after gears activated
   useEffect(() => {
-    const NUM_GEARS_FOR_BRIDGE = 6; // This should match the number of gears on platform 1
+    const NUM_GEARS_FOR_BRIDGE = 6;
     if (
       activatedPlatformGears === NUM_GEARS_FOR_BRIDGE &&
       gameRef.current &&
-      gameRef.current.bridge &&
-      !isBridgeExtended
+      gameRef.current.bridges &&
+      extendedBridges[0] === false
     ) {
-      setIsBridgeExtended(true); // Ensure animation runs only once
-      const bridgeMeshGroup = gameRef.current.bridge;
-      bridgeMeshGroup.visible = true;
-      bridgeMeshGroup.children.forEach((plank, index) => {
-        plank.scale.set(0.01, 1, 1); // Start scaled down on X-axis (assuming length is along X)
-        plank.material.transparent = true; // Enable transparency for opacity animation
-        plank.material.opacity = 0;     // Start fully transparent
-        // Animate scale
-        new TWEEN.Tween(plank.scale)
-          .to({ x: 1 }, 700) // Grow to full length
-          .delay(index * 150) // Stagger appearance of each plank
-          .easing(TWEEN.Easing.Elastic.Out)
-          .start();
-        // Animate opacity
-        new TWEEN.Tween(plank.material)
-          .to({ opacity: 1 }, 500) // Fade in
-          .delay(index * 150)      // Stagger with scale animation
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start();
-      });
+      extendBridge(0);
     }
-  }, [activatedPlatformGears, isBridgeExtended]); // Dependencies for this effect
-  // useEffect for second bridge activation logic (triggered by plinths)
+  }, [activatedPlatformGears, extendedBridges]);
+
+  // Extend subsequent bridges based on plinth activations
   useEffect(() => {
-    const NUM_PLINTHS_FOR_BRIDGE2 = 2;
-    if (
-      activatedPlinths === NUM_PLINTHS_FOR_BRIDGE2 &&
-      gameRef.current &&
-      gameRef.current.bridge2 && // Ensure bridge2 exists
-      !isBridge2Extended // Ensure animation runs only once
-    ) {
-      setIsBridge2Extended(true);
-      const bridge2MeshGroup = gameRef.current.bridge2;
-      bridge2MeshGroup.visible = true;
-      // Animate planks of the second bridge
-      // Assumes bridge2MeshGroup.children are the planks and have their own material instances
-      bridge2MeshGroup.children.forEach((plank, index) => {
-        if (plank.isMesh && plank.material) { // Check it's a mesh with material
-          plank.scale.set(0.01, 1, 1); // Start scaled down (length assumed along local X)
-          plank.material.transparent = true;
-          plank.material.opacity = 0;
-          new TWEEN.Tween(plank.scale)
-            .to({ x: 1 }, 700)
-            .delay(index * 150)
-            .easing(TWEEN.Easing.Elastic.Out)
-            .start();
-          new TWEEN.Tween(plank.material)
-            .to({ opacity: 1 }, 500)
-            .delay(index * 150)
-            .easing(TWEEN.Easing.Quadratic.Out)
-            .start();
-        }
-      });
+    const PLINTHS_PER_PLATFORM = 2;
+    if (!gameRef.current || !gameRef.current.bridges) return;
+    for (let i = 1; i < gameRef.current.bridges.length; i++) {
+      if (activatedPlinths >= i * PLINTHS_PER_PLATFORM && extendedBridges[i] === false) {
+        extendBridge(i);
+      }
     }
-  }, [activatedPlinths, isBridge2Extended, gameRef]); // Dependencies for this effect
+  }, [activatedPlinths, extendedBridges]);
   return React.createElement('div',
     { ref: mountRef, style: { width: '100%', height: '100%' } },
     interactedObjects > 0 && React.createElement('div',
