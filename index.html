@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clockwork Porcelain Sandbox</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three@0.160.0?dev",
+          "three/": "https://esm.sh/three@0.160.0&dev/",
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom": "https://esm.sh/react-dom@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=react,react-dom,three",
+          "tween.js": "https://esm.sh/@tweenjs/tween.js@21.0.0",
+          "game": "./game.js",
+          "rosieControls": "./rosieControls.js",
+          "world": "./world.js",
+          "lighting": "./lighting.js",
+          "interactables": "./interactables.js"
+        }
+      }
+    </script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #f4e4bc, #d4af7a);
+        overflow: hidden;
+      }
+      #root {
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui-overlay {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        color: #8b6914;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(255,255,255,0.8);
+        z-index: 100;
+        font-size: 16px;
+      }
+      .controls-hint {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        color: #8b6914;
+        font-size: 14px;
+        text-shadow: 0 0 5px rgba(255,255,255,0.8);
+        z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div class="ui-overlay">
+      <div>🏛️ Clockwork Porcelain Realm</div>
+      <div style="font-size: 12px; margin-top: 5px;">Click gears and explore the floating city!</div>
+    </div>
+    <div class="controls-hint">
+      WASD: Move • Mouse: Look Around • Click: Interact
+    </div>
+    <script type="module" src="main.js"></script>
+    <script src="https://storage.googleapis.com/rosebud_staticfiles/ScriptsLoader-Universal.js"></script>
+    <script src="https://storage.googleapis.com/rosebud_staticfiles/ChatManager.js"></script>
+    <script src="https://storage.googleapis.com/rosebud_staticfiles/ImageGenerator.js"></script>
+    <script src="https://storage.googleapis.com/rosebud_staticfiles/ProgressLogger.js"></script>
+    <script src="https://storage.googleapis.com/rosebud_staticfiles/OGP.js"></script>
+  </body>
+</html>
