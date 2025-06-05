@@ -6,7 +6,7 @@ import Platform from './Platform'
 import Bridge from './Bridge'
 import Player from './Player'
 
-const positions = [...Array(8)].map((_, i) => {
+const positions: [number, number, number][] = [...Array(8)].map((_, i) => {
   const angle = (i / 8) * 2 * Math.PI
   const radius = 20
   return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius]
@@ -20,15 +20,13 @@ const Scene = () => {
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
       <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
       <Suspense fallback={null}>
-        {positions.map((pos, idx) => (
-          <Platform key={idx + 1} id={idx + 1} position={pos as [number, number, number]} />
+        {positions.map((position, idx) => (
+          <Platform key={idx + 1} id={idx + 1} position={position} />
         ))}
         <Platform id={9} position={[0, 0, 0]} large />
-        {positions.map((pos, idx) => (
+        {positions.map((_, idx) => (
           <Bridge
             key={idx + 1}
-            from={idx + 1}
-            to={idx + 2 > 8 ? 9 : idx + 2}
             show={state.completedPlatforms.has(idx + 2 > 8 ? 9 : idx + 2)}
             fromPos={positions[idx]}
             toPos={idx + 2 > 8 ? [0, 0, 0] : positions[idx + 1]}
