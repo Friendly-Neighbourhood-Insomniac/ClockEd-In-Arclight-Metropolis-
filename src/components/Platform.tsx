@@ -1,4 +1,3 @@
-import { useGame } from '../context/GameContext'
 import InteractiveObject from './InteractiveObject'
 
 const Platform = ({
